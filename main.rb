@@ -26,6 +26,7 @@ end
 # Setup RabbitMQ connection
 mq = Bunny.new "amqp://#{CONFIG["RABBITMQ"]["USER"]}:#{CONFIG["RABBITMQ"]["PASS"]}@#{CONFIG["RABBITMQ"]["HOST"]}:#{CONFIG["RABBITMQ"]["PORT"]}"
 mq.start
+logger.info "Started"
 
 channel = mq.create_channel
 exchange = channel.topic "partbox", :auto_delete => true
@@ -35,9 +36,10 @@ print_queue_consumer = ZebraJobConsumer.new(channel, queue)
 
 print_queue_consumer.on_delivery do |delivery_info, metadata, payload|
   logger.info "Got print job"
-
+  logger.info payload
+  logger.info "This is heading to the printer called:#{metadata[:headers]["printer"]}"
   # Build command to print label
-  command = %W(lpr -P #{CONFIG["CUPS_PRINTER_NAME"]} -o raw)
+  command = %W(lpr -P #{metadata[:headers]["printer"]} -o raw)
 
   process = IO.popen(command, "r+")
   process.write(payload)
